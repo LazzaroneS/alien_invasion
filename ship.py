@@ -8,7 +8,7 @@ class Ship:
         self.screen_rect = ai_game.screen.get_rect()
         
         # load the ship image and retrieve its bounding rectangle
-        self.image = pygame.image.load('image/redfighter0005.png')
+        self.image = pygame.image.load('images/redfighter0005.png')
         self.rect = self.image.get_rect()
         
         # Each new ship is situated at the central bottom of the screen.
