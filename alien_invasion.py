@@ -27,7 +27,7 @@ class AlienInvasion:
         """Main loop of the beginning game."""
         while True:
             self._check_events()
-            self.update()
+            self.ship.update()
             self._update_screen()
             self.clock.tick(60)
 
