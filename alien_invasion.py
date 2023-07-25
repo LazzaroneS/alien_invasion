@@ -1,8 +1,11 @@
 import sys
+from time import sleep
 
 import pygame
 
 from settings import Settings
+from game_stats import GameStats
+from button import Button
 from ship import Ship
 from bullet import Bullet
 from alien import Alien
@@ -20,6 +23,9 @@ class AlienInvasion:
         self.settings.screen_height = self.screen.get_rect().height
 
         pygame.display.set_caption("Alien Invasion")
+        
+        # Establish an instance for the storage of game statistical info
+        self.stats = GameStats(self)
 
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
@@ -30,12 +36,22 @@ class AlienInvasion:
         # set background color
         self.bg_color = (self.settings.bg_color)
 
+        # Turn to inactive status when the game start
+        self.game_active = False
+
+        # Create play button
+        self.play_button = Button(self, "Play")
+
     def run_game(self):
         """Main loop of the beginning game."""
         while True:
             self._check_events()
-            self.ship.update()
-            self._update_bullets()
+
+            if self.game_active:
+                self.ship.update()
+                self._update_bullets()
+                self._update_aliens()
+
             self._update_screen()
             self.clock.tick(60)
 
@@ -48,6 +64,28 @@ class AlienInvasion:
                 self._check_keydown_events(event)
             elif event.type == pygame.KEYUP:
                 self._check_keyup_events(event)
+            elif event.type - pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                self._check_play_button(mouse_pos)
+
+    def _check_play_button(self, mouse_pos):
+        """Start the game when a player click play button."""
+        button_clicked = self.play_button.rect.collidepoint(mouse_pos):
+        if button_clicked and not self.game_active:
+            # Resetting the game's statistical information.
+            self.stats.reset_stats()
+            self.game_active = True
+
+            # Empty aliens list and bullets list
+            self.bullets.empty()
+            self.aliens.empty()
+            
+            # Create a new fleet and place the ship at the center of the screen
+            self._create_fleet()
+            self.ship.center_ship()
+
+            # Hiding the cursor
+            pygame.mouse.set_visible(False)
 
     def _check_keydown_events(self, event):
         """Response for keydown"""
@@ -83,6 +121,32 @@ class AlienInvasion:
             if bullet.rect.bottom <= 0:
                 self.bullets.remove(bullet)
 
+        self._check_bullet_alien_collisions()
+
+    def _check_bullet_alien_collisions(self):
+        # Check if any bullet have hit the alien.
+        # If there is, then delete the bullet and the alien.
+        collisions = pygame.sprite.groupcollide(
+            self.bullets, self.aliens, True, True
+        )
+
+        if not self.aliens:
+            # Delete all bullets on the screen and create a new fleet
+            self.bullets.empty()
+            self._create_fleet()
+        
+    def _update_aliens(self):
+        """Check if there is any alien reach the edge and update the position of the fleet."""
+        self._check_fleet_edges()
+        self.aliens.update()
+
+        # Inspecting the collision between aliens and the ship
+        if pygame.sprite.spritecollideany(self.ship, self.aliens):
+            self._ship_hit()
+
+        # Check if there's any alien have reached the bottom of the screen
+        self._check_aliens_bottom()
+
     def _create_fleet(self):
         """Create an alien fleet"""
         # Create an alien and continue incorporating it until
@@ -109,7 +173,52 @@ class AlienInvasion:
         new_alien.rect.y = y_position
         self.aliens.add(new_alien)
 
+    def _check_fleet_edges(self):
+        """Take appropriate measure when fleet reach the border."""
+        for alien in self.aliens.sprites():
+            if alien.check_edges():
+                self._change_fleet_direction()
+                break
                 
+    def _change_fleet_direction(self):
+        """Move down the fleet and reverse their direction."""
+        for alien in self.aliens.sprites():
+            alien.rect.y += self.settings.fleet_drop_speed
+        self.settings.fleet_direction *= -1
+
+    def _ship_hit(self):
+        """Response collision between aliens and the ship."""
+        if self.stats.ships_left > 0:
+            # Reduce the value of ship_left by 1.
+            self.stats.ships_left -= 1
+
+            # Empty the list of aliens and the list of bullets
+            self.bullets.empty()
+            self.aliens.empty()
+        
+            # Create a new fleet and place the ship at the center bottom of the screen.
+            self._create_fleet()
+            self.ship.center_ship()
+        
+            # Pause
+            sleep(1)
+        else:
+            self.game_active = False
+            pygame.mouse.set_visible(True)
+        
+    def _check_aliens_bottom(self):
+        """Check if there is any alien have reached the bottom of the screen."""
+        for alien in self.aliens.sprites():
+            if alien.rect.bottom >= self.settings.screen_height:
+                # Response like ship collision
+                self._ship_hit()
+                break
+
+    def playBGM(self):
+        pygame.mixer.init()
+        pygame.mixer.music.load('./BGM/bgm.mp3')
+        pygame.mixer.music.play(-1)
+    
     def _update_screen(self):
         """update images on the screen and swich to new screen"""
         self.screen.fill(self.bg_color)
@@ -117,6 +226,10 @@ class AlienInvasion:
             bullet.draw_bullet()
         self.ship.blitme()
         self.aliens.draw(self.screen)
+
+        # Draw a play button when game is inactive
+        if not self.game_active:
+            self.play_button.draw_button()
         
         pygame.display.flip()
         
@@ -124,4 +237,5 @@ class AlienInvasion:
 if __name__ == '__main__':
     # Create a instance of the game and run it.
     ai = AlienInvasion()
-    ai.run_game()
+    ai.playBGM()
+    ai.run_game()    
