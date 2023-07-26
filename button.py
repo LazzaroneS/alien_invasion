@@ -29,5 +29,5 @@ class Button:
 
     def draw_button(self):
         """Create a button that is imbued with colors, and proceed to draw the text upon it."""
-        self.screen.fill(self.botton_color, self.rect)
+        self.screen.fill(self.button_color, self.rect)
         self.screen.blit(self.msg_image, self.msg_image_rect)
