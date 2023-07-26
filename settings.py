@@ -23,6 +23,11 @@ class Settings:
 
         # intensify rate of game speed
         self.speedup_scale = 1.2
+        # intensify rate of a alien score
+        self.score_scale = 1.5
+        
+        # Path of high score's json.
+        self.path_of_high_score = 'high_score.json' 
         
         self.initailize_dynamic_settings()
 
@@ -36,8 +41,13 @@ class Settings:
         # whereas it equals -1 signifies the movement towards the left.
         self.fleet_direction = 1
 
+        # Score settings
+        self.alien_points = 50
+
     def increase_speed(self):
         """Speed up dynamic settings."""
         self.ship_speed *= self.speedup_scale
         self.bullet_speed *= self.speedup_scale
         self.alien_speed *= self.speedup_scale
+
+        self.alien_points = int(self.alien_points * self.score_scale)

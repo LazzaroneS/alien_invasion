@@ -1,11 +1,13 @@
 import sys
 from time import sleep
+from pathlib import Path
+import json
 
 import pygame
 
 from settings import Settings
 from game_stats import GameStats
-from Scoreboard import Scoreboard
+from scoreboard import Scoreboard
 from button import Button
 from ship import Ship
 from bullet import Bullet
@@ -85,6 +87,7 @@ class AlienInvasion:
 
             # Resetting the game's statistical information.
             self.stats.reset_stats()
+            self.sb.prep_images()
             self.game_active = True
 
             # Empty aliens list and bullets list
@@ -109,6 +112,7 @@ class AlienInvasion:
         elif event.key == pygame.K_LEFT:
             self.ship.moving_left = True
         elif event.key == pygame.K_q:
+            self._save_high_score()
             sys.exit()
         elif event.key == pygame.K_SPACE:
             self._fire_bullet()
@@ -147,11 +151,24 @@ class AlienInvasion:
             self.bullets, self.aliens, True, True
         )
 
+        if collisions:
+            for aliens in collisions.values():
+                self.stats.score += self.settings.alien_points * len(aliens)
+            self.sb.prep_score()
+            self.sb.check_high_score()
+
         if not self.aliens:
-            # Delete all bullets on the screen and create a new fleet
-            self.bullets.empty()
-            self._create_fleet()
-            self.settings.increase_speed()
+            self.start_new_level()
+
+    def start_new_level(self):
+        # Delete all bullets on the screen and create a new fleet
+        self.bullets.empty()
+        self._create_fleet()
+        self.settings.increase_speed()
+
+        # Increase the level
+        self.stats.level += 1
+        self.sb.prep_level()
         
     def _update_aliens(self):
         """Check if there is any alien reach the edge and update the position of the fleet."""
@@ -209,6 +226,7 @@ class AlienInvasion:
         if self.stats.ships_left > 0:
             # Reduce the value of ship_left by 1.
             self.stats.ships_left -= 1
+            self.sb.prep_ships()
 
             # Empty the list of aliens and the list of bullets
             self.bullets.empty()
@@ -236,6 +254,17 @@ class AlienInvasion:
         pygame.mixer.init()
         pygame.mixer.music.load('./BGM/bgm.mp3')
         pygame.mixer.music.play(-1)
+
+    def _save_high_score(self):
+        path = Path(self.settings.path_of_high_score)
+        contents = json.dumps(self.sb.stats.high_score)
+        path.write_text(contents)
+
+    def _read_high_score(self):
+        path = Path(self.settings.path_of_high_score)
+        contents = path.read_text()
+        self.stats.high_score = int(contents)
+        self.sb.prep_high_score()
     
     def _update_screen(self):
         """update images on the screen and swich to new screen"""
@@ -258,4 +287,5 @@ class AlienInvasion:
 if __name__ == '__main__':
     # Create a instance of the game and run it.
     ai = AlienInvasion()
+    ai._read_high_score()
     ai.run_game()    
